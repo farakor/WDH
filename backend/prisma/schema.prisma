@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String   @id @default(uuid())
+  email                String   @unique
+  password             String
+  firstName            String?
+  lastName             String?
+  telegramChatId       String?
+  notificationsEnabled Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  websites Website[]
+  domains  Domain[]
+
+  @@map("users")
+}
+
+model Website {
+  id            String   @id @default(uuid())
+  url           String
+  name          String
+  description   String?
+  checkInterval Int      @default(5) // в минутах
+  isActive      Boolean  @default(true)
+  notifyOnDown  Boolean  @default(true)
+  notifyOnUp    Boolean  @default(true)
+  ipAddress     String? // IP адрес сайта
+  hosting       String? // Хостинг провайдер
+  userId        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  statusChecks StatusCheck[]
+
+  @@index([userId])
+  @@map("websites")
+}
+
+model StatusCheck {
+  id           String      @id @default(uuid())
+  websiteId    String
+  status       CheckStatus
+  responseTime Int? // в миллисекундах
+  statusCode   Int?
+  errorMessage String?
+  checkedAt    DateTime    @default(now())
+
+  // SSL информация
+  sslValid     Boolean? // Валидность SSL сертификата
+  sslExpiresAt DateTime? // Дата истечения сертификата
+  sslIssuer    String? // Издатель сертификата
+  sslDaysLeft  Int? // Дней до истечения
+
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+  @@index([checkedAt])
+  @@map("status_checks")
+}
+
+enum CheckStatus {
+  ONLINE
+  OFFLINE
+  ERROR
+}
+
+model Domain {
+  id             String   @id @default(uuid())
+  domain         String
+  name           String
+  description    String?
+  checkInterval  Int      @default(1440) // в минутах (по умолчанию раз в день)
+  isActive       Boolean  @default(true)
+  notifyOnExpiry Boolean  @default(true)
+  userId         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domainChecks DomainCheck[]
+
+  @@index([userId])
+  @@map("domains")
+}
+
+model DomainCheck {
+  id           String       @id @default(uuid())
+  domainId     String
+  status       DomainStatus
+  expiresAt    DateTime?
+  registrar    String?
+  nameServers  String[]     @default([])
+  daysLeft     Int?
+  errorMessage String?
+  checkedAt    DateTime     @default(now())
+
+  domain Domain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@index([domainId])
+  @@index([checkedAt])
+  @@map("domain_checks")
+}
+
+enum DomainStatus {
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+  ERROR
+}
