@@ -119,10 +119,10 @@ const DashboardPage = () => {
             <div className="card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Активных</p>
-                  <p className="text-3xl font-bold text-primary-600">{stats?.activeWebsites || 0}</p>
+                  <p className="text-sm text-gray-600">С ошибками</p>
+                  <p className="text-3xl font-bold text-orange-600">{stats?.errorCount || 0}</p>
                 </div>
-                <CheckCircle className="w-10 h-10 text-primary-400" />
+                <AlertTriangle className="w-10 h-10 text-orange-400" />
               </div>
             </div>
 

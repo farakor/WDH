@@ -300,11 +300,16 @@ export const getWebsiteStats = async (req: AuthRequest, res: Response): Promise<
       w.statusChecks.length > 0 && w.statusChecks[0].status === 'OFFLINE'
     ).length;
 
+    const errorCount = websites.filter(w => 
+      w.statusChecks.length > 0 && w.statusChecks[0].status === 'ERROR'
+    ).length;
+
     res.json({
       totalWebsites,
       activeWebsites,
       onlineCount,
       offlineCount,
+      errorCount,
     });
   } catch (error) {
     console.error('Get stats error:', error);

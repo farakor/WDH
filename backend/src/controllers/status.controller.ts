@@ -73,8 +73,10 @@ export const sendStatusReport = async (req: AuthRequest, res: Response): Promise
     await telegramService.sendStatusReport(userId);
 
     res.json({ message: 'Отчет отправлен в Telegram' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Send report error:', error);
-    res.status(500).json({ message: 'Ошибка при отправке отчета' });
+    res.status(500).json({ 
+      message: error.message || 'Ошибка при отправке отчета'
+    });
   }
 };

@@ -17,14 +17,18 @@ class TelegramService {
 
   async sendMessage(chatId: string, message: string): Promise<void> {
     if (!this.bot) {
-      console.warn('Telegram Bot не инициализирован');
-      return;
+      const error = 'Telegram Bot не инициализирован';
+      console.warn(error);
+      throw new Error(error);
     }
 
     try {
+      console.log(`📤 Отправка сообщения в Telegram. Chat ID: ${chatId}`);
       await this.bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
-    } catch (error) {
-      console.error('Ошибка отправки сообщения в Telegram:', error);
+      console.log('✓ Сообщение успешно отправлено в Telegram');
+    } catch (error: any) {
+      console.error('❌ Ошибка отправки сообщения в Telegram:', error.message);
+      throw error;
     }
   }
 
@@ -95,6 +99,8 @@ ${emoji} <b>${statusText}</b>
   }
 
   async sendStatusReport(userId: string): Promise<void> {
+    console.log(`📊 Запрос отчета для пользователя: ${userId}`);
+    
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -109,36 +115,79 @@ ${emoji} <b>${statusText}</b>
       },
     });
 
-    if (!user || !user.telegramChatId) {
-      return;
+    if (!user) {
+      throw new Error('Пользователь не найден');
     }
 
-    let message = '📊 <b>Статус всех сайтов</b>\n\n';
+    if (!user.telegramChatId) {
+      throw new Error('Telegram Chat ID не указан. Пожалуйста, укажите Chat ID в настройках профиля.');
+    }
 
-    for (const website of user.websites) {
-      const lastCheck = website.statusChecks[0];
-      const emoji =
-        lastCheck?.status === CheckStatus.ONLINE
-          ? '🟢'
-          : lastCheck?.status === CheckStatus.OFFLINE
-          ? '🔴'
-          : '🟠';
+    console.log(`✓ Пользователь найден. Chat ID: ${user.telegramChatId}, Сайтов: ${user.websites.length}`);
 
-      message += `${emoji} <b>${website.name}</b>\n`;
-      message += `   ${website.url}\n`;
-      if (lastCheck) {
-        message += `   Статус: ${lastCheck.status}`;
-        if (lastCheck.responseTime) {
-          message += ` (${lastCheck.responseTime}ms)`;
+    // Подсчет статистики
+    const totalWebsites = user.websites.length;
+    const onlineWebsites = user.websites.filter(
+      (w) => w.statusChecks[0]?.status === CheckStatus.ONLINE
+    ).length;
+    const offlineWebsites = user.websites.filter(
+      (w) => w.statusChecks[0]?.status === CheckStatus.OFFLINE
+    ).length;
+    const errorWebsites = user.websites.filter(
+      (w) => w.statusChecks[0]?.status === CheckStatus.ERROR
+    ).length;
+
+    // Отправляем сводку
+    let summaryMessage = `📊 <b>Статус всех сайтов</b>\n\n`;
+    summaryMessage += `<b>Всего:</b> ${totalWebsites}\n`;
+    summaryMessage += `🟢 <b>Онлайн:</b> ${onlineWebsites}\n`;
+    summaryMessage += `🔴 <b>Офлайн:</b> ${offlineWebsites}\n`;
+    summaryMessage += `🟠 <b>Ошибки:</b> ${errorWebsites}\n\n`;
+    summaryMessage += `<i>Время: ${new Date().toLocaleString('ru-RU')}</i>`;
+
+    await this.sendMessage(user.telegramChatId, summaryMessage);
+
+    // Отправляем проблемные сайты (оффлайн и ошибки)
+    const problemWebsites = user.websites.filter(
+      (w) => w.statusChecks[0]?.status !== CheckStatus.ONLINE
+    );
+
+    if (problemWebsites.length > 0) {
+      const MAX_MESSAGE_LENGTH = 4000; // Лимит Telegram - 4096, оставляем запас
+      let detailMessage = '⚠️ <b>Проблемные сайты:</b>\n\n';
+      let messageCount = 1;
+
+      for (const website of problemWebsites) {
+        const lastCheck = website.statusChecks[0];
+        const emoji =
+          lastCheck?.status === CheckStatus.OFFLINE ? '🔴' : '🟠';
+
+        let websiteInfo = `${emoji} <b>${website.name}</b>\n`;
+        websiteInfo += `   ${website.url}\n`;
+        if (lastCheck) {
+          websiteInfo += `   Статус: ${lastCheck.status}`;
+          if (lastCheck.responseTime) {
+            websiteInfo += ` (${lastCheck.responseTime}ms)`;
+          }
+          websiteInfo += '\n';
         }
-        message += '\n';
+        websiteInfo += '\n';
+
+        // Если сообщение станет слишком длинным, отправляем его и начинаем новое
+        if ((detailMessage + websiteInfo).length > MAX_MESSAGE_LENGTH) {
+          await this.sendMessage(user.telegramChatId, detailMessage);
+          messageCount++;
+          detailMessage = `⚠️ <b>Проблемные сайты (продолжение ${messageCount}):</b>\n\n`;
+        }
+
+        detailMessage += websiteInfo;
       }
-      message += '\n';
+
+      // Отправляем последнее сообщение
+      if (detailMessage.length > 0) {
+        await this.sendMessage(user.telegramChatId, detailMessage);
+      }
     }
-
-    message += `<i>Время: ${new Date().toLocaleString('ru-RU')}</i>`;
-
-    await this.sendMessage(user.telegramChatId, message);
   }
 
   async sendDomainAlert(

@@ -44,6 +44,7 @@ export interface WebsiteStats {
   activeWebsites: number
   onlineCount: number
   offlineCount: number
+  errorCount: number
 }
 
 export interface AuthResponse {

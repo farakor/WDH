@@ -1,15 +1,21 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Layout } from '../components/Layout'
 import { api } from '../lib/api'
 import { Domain } from '../types'
 import toast from 'react-hot-toast'
-import { Plus, Globe, CheckCircle, XCircle, AlertTriangle, Calendar, Pencil, Trash2, RefreshCw } from 'lucide-react'
+import { Plus, Globe, CheckCircle, XCircle, AlertTriangle, Calendar, Pencil, Trash2, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Search, X } from 'lucide-react'
+
+type SortField = 'domain' | 'status' | 'daysLeft'
+type SortDirection = 'asc' | 'desc'
 
 const DomainsPage = () => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null)
   const [selectedDomains, setSelectedDomains] = useState<Set<string>>(new Set())
+  const [sortField, setSortField] = useState<SortField>('daysLeft')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [searchQuery, setSearchQuery] = useState('')
   const queryClient = useQueryClient()
 
   const { data: domains, isLoading } = useQuery<Domain[]>({
@@ -19,6 +25,73 @@ const DomainsPage = () => {
       return response.data
     },
   })
+
+  // Функция для переключения сортировки
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Если кликнули на уже активное поле, меняем направление
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Если кликнули на новое поле, устанавливаем его с ascending
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  // Иконка сортировки для заголовка
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 text-gray-400" />
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="w-4 h-4 text-primary-600" />
+      : <ArrowDown className="w-4 h-4 text-primary-600" />
+  }
+
+  // Фильтрация и сортировка доменов
+  const sortedDomains = useMemo(() => {
+    if (!domains) return []
+    
+    // Сначала фильтруем по поисковому запросу
+    let filtered = domains
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = domains.filter(domain => 
+        domain.name.toLowerCase().includes(query) ||
+        domain.domain.toLowerCase().includes(query) ||
+        domain.description?.toLowerCase().includes(query)
+      )
+    }
+    
+    // Затем сортируем отфильтрованные результаты
+    return [...filtered].sort((a, b) => {
+      let compareResult = 0
+
+      if (sortField === 'domain') {
+        // Сортировка по имени домена (алфавит)
+        compareResult = a.domain.localeCompare(b.domain, 'ru')
+      } else if (sortField === 'status') {
+        // Сортировка по статусу
+        const statusOrder = { 'EXPIRED': 0, 'EXPIRING_SOON': 1, 'ACTIVE': 2, 'ERROR': 3 }
+        const aStatus = a.domainChecks?.[0]?.status || 'ERROR'
+        const bStatus = b.domainChecks?.[0]?.status || 'ERROR'
+        compareResult = statusOrder[aStatus] - statusOrder[bStatus]
+      } else if (sortField === 'daysLeft') {
+        // Сортировка по количеству дней
+        const aDaysLeft = a.domainChecks?.[0]?.daysLeft
+        const bDaysLeft = b.domainChecks?.[0]?.daysLeft
+        
+        // Если у одного из доменов нет данных о днях, помещаем его в конец
+        if (aDaysLeft === null || aDaysLeft === undefined) return 1
+        if (bDaysLeft === null || bDaysLeft === undefined) return -1
+        
+        compareResult = aDaysLeft - bDaysLeft
+      }
+
+      // Применяем направление сортировки
+      return sortDirection === 'asc' ? compareResult : -compareResult
+    })
+  }, [domains, sortField, sortDirection, searchQuery])
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/domains/${id}`),
@@ -74,8 +147,8 @@ const DomainsPage = () => {
   }
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked && domains) {
-      setSelectedDomains(new Set(domains.map(d => d.id)))
+    if (checked && sortedDomains) {
+      setSelectedDomains(new Set(sortedDomains.map(d => d.id)))
     } else {
       setSelectedDomains(new Set())
     }
@@ -91,7 +164,7 @@ const DomainsPage = () => {
     setSelectedDomains(newSelected)
   }
 
-  const isAllSelected = domains && domains.length > 0 && selectedDomains.size === domains.length
+  const isAllSelected = sortedDomains && sortedDomains.length > 0 && selectedDomains.size === sortedDomains.length
 
   const handleCheck = (id: string) => {
     checkMutation.mutate(id)
@@ -185,11 +258,40 @@ const DomainsPage = () => {
           />
         )}
 
+        {/* Search Bar */}
+        <div className="card">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Поиск по названию или домену..."
+              className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <p className="mt-2 text-sm text-gray-600">
+              Найдено: <span className="font-semibold">{sortedDomains?.length || 0}</span> {sortedDomains?.length === 1 ? 'домен' : 'доменов'}
+            </p>
+          )}
+        </div>
+
         {/* Domains List */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">
-              Список доменов ({domains?.length || 0})
+              Список доменов ({sortedDomains?.length || 0})
             </h2>
             {selectedDomains.size > 0 && (
               <button
@@ -203,7 +305,7 @@ const DomainsPage = () => {
             )}
           </div>
 
-          {domains && domains.length > 0 ? (
+          {sortedDomains && sortedDomains.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -216,17 +318,35 @@ const DomainsPage = () => {
                         className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Домен
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleSort('domain')}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span>Домен</span>
+                        {getSortIcon('domain')}
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Статус
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleSort('status')}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span>Статус</span>
+                        {getSortIcon('status')}
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Дата окончания
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Осталось дней
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleSort('daysLeft')}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span>Осталось дней</span>
+                        {getSortIcon('daysLeft')}
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Действия
@@ -234,7 +354,7 @@ const DomainsPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {domains.map((domain) => (
+                  {sortedDomains.map((domain) => (
                     <tr key={domain.id} className={selectedDomains.has(domain.id) ? 'bg-primary-50' : ''}>
                       <td className="px-6 py-4">
                         <input
@@ -310,13 +430,33 @@ const DomainsPage = () => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Globe className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                У вас пока нет добавленных доменов
-              </h3>
-              <p className="text-gray-600">
-                Добавьте свой первый домен для отслеживания
-              </p>
+              {searchQuery ? (
+                <>
+                  <Search className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Ничего не найдено
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    По запросу "{searchQuery}" доменов не найдено
+                  </p>
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="btn-secondary"
+                  >
+                    Очистить поиск
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Globe className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    У вас пока нет добавленных доменов
+                  </h3>
+                  <p className="text-gray-600">
+                    Добавьте свой первый домен для отслеживания
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>

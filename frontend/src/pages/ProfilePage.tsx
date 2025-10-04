@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Layout } from '../components/Layout'
 import { api } from '../lib/api'
@@ -18,11 +18,23 @@ const ProfilePage = () => {
   })
 
   const [formData, setFormData] = useState({
-    firstName: profile?.firstName || '',
-    lastName: profile?.lastName || '',
-    telegramChatId: profile?.telegramChatId || '',
-    notificationsEnabled: profile?.notificationsEnabled || false,
+    firstName: '',
+    lastName: '',
+    telegramChatId: '',
+    notificationsEnabled: false,
   })
+
+  // Обновляем formData, когда загрузится profile
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        telegramChatId: profile.telegramChatId || '',
+        notificationsEnabled: profile.notificationsEnabled || false,
+      })
+    }
+  }, [profile])
 
   const updateMutation = useMutation({
     mutationFn: (data: typeof formData) => api.put('/auth/profile', data),

@@ -6,13 +6,17 @@ import { Website } from '../types'
 import toast from 'react-hot-toast'
 import { WebsiteForm } from '../components/WebsiteForm'
 import { ImportWebsites } from '../components/ImportWebsites'
-import { Plus, Upload, Globe, CheckCircle, XCircle, Circle, ShieldAlert, AlertTriangle, Server, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Upload, Globe, CheckCircle, XCircle, Circle, ShieldAlert, AlertTriangle, Server, Pencil, Trash2, Search, X } from 'lucide-react'
 
 const WebsitesPage = () => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingWebsite, setEditingWebsite] = useState<Website | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [selectedWebsites, setSelectedWebsites] = useState<Set<string>>(new Set())
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterIp, setFilterIp] = useState('')
+  const [filterHosting, setFilterHosting] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
   const queryClient = useQueryClient()
 
   const { data: websites, isLoading } = useQuery<Website[]>({
@@ -97,6 +101,71 @@ const WebsitesPage = () => {
   }
 
   const isAllSelected = websites && websites.length > 0 && selectedWebsites.size === websites.length
+
+  // Функция для получения статуса сайта
+  const getWebsiteStatus = (website: Website): string => {
+    if (!website.statusChecks || website.statusChecks.length === 0) {
+      return 'NOT_CHECKED'
+    }
+    return website.statusChecks[0].status
+  }
+
+  // Получить уникальные IP адреса
+  const uniqueIPs = Array.from(new Set(websites?.filter(w => w.ipAddress).map(w => w.ipAddress) || []))
+  
+  // Получить уникальные хостинги
+  const uniqueHostings = Array.from(new Set(websites?.filter(w => w.hosting).map(w => w.hosting) || []))
+
+  // Фильтрация сайтов
+  const filteredWebsites = websites?.filter((website) => {
+    // Поиск по названию, URL, IP и хостингу
+    const searchLower = searchQuery.toLowerCase()
+    const matchesSearch = !searchQuery || 
+      website.name.toLowerCase().includes(searchLower) ||
+      website.url.toLowerCase().includes(searchLower) ||
+      (website.ipAddress && website.ipAddress.toLowerCase().includes(searchLower)) ||
+      (website.hosting && website.hosting.toLowerCase().includes(searchLower))
+
+    // Фильтр по IP
+    const matchesIp = !filterIp || website.ipAddress === filterIp
+
+    // Фильтр по хостингу
+    const matchesHosting = !filterHosting || website.hosting === filterHosting
+
+    // Фильтр по статусу
+    const websiteStatus = getWebsiteStatus(website)
+    const matchesStatus = !filterStatus || websiteStatus === filterStatus
+
+    return matchesSearch && matchesIp && matchesHosting && matchesStatus
+  }) || []
+
+  // Функция для получения приоритета статуса при сортировке
+  const getStatusPriority = (status: string): number => {
+    const priorityMap: { [key: string]: number } = {
+      'OFFLINE': 0,    // Офлайн - самый высокий приоритет
+      'ERROR': 1,      // Ошибка - второй приоритет
+      'ONLINE': 2,     // Онлайн - третий приоритет
+      'NOT_CHECKED': 3 // Не проверялся - самый низкий приоритет
+    }
+    return priorityMap[status] ?? 4
+  }
+
+  // Сортировка по статусу: офлайн → ошибки → онлайн → не проверялся
+  const sortedWebsites = [...filteredWebsites].sort((a, b) => {
+    const statusA = getWebsiteStatus(a)
+    const statusB = getWebsiteStatus(b)
+    return getStatusPriority(statusA) - getStatusPriority(statusB)
+  })
+
+  // Сброс фильтров
+  const clearFilters = () => {
+    setSearchQuery('')
+    setFilterIp('')
+    setFilterHosting('')
+    setFilterStatus('')
+  }
+
+  const hasActiveFilters = searchQuery || filterIp || filterHosting || filterStatus
 
   const getStatusBadge = (website: Website) => {
     if (!website.statusChecks || website.statusChecks.length === 0) {
@@ -189,11 +258,105 @@ const WebsitesPage = () => {
           <ImportWebsites onClose={() => setShowImport(false)} />
         )}
 
+        {/* Поиск и фильтры */}
+        <div className="card">
+          <div className="space-y-4">
+            {/* Поисковая строка */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Поиск по сайту, URL, IP адресу или хостингу..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+
+            {/* Фильтры */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Фильтр по IP */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">IP адрес</label>
+                <select
+                  value={filterIp}
+                  onChange={(e) => setFilterIp(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Все IP адреса</option>
+                  {uniqueIPs.map((ip) => (
+                    <option key={ip} value={ip}>{ip}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Фильтр по хостингу */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Хостинг</label>
+                <select
+                  value={filterHosting}
+                  onChange={(e) => setFilterHosting(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Все хостинги</option>
+                  {uniqueHostings.map((hosting) => (
+                    <option key={hosting} value={hosting}>{hosting}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Фильтр по статусу */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Статус</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">Все статусы</option>
+                  <option value="ONLINE">Онлайн</option>
+                  <option value="OFFLINE">Офлайн</option>
+                  <option value="ERROR">Ошибка</option>
+                  <option value="NOT_CHECKED">Не проверялся</option>
+                </select>
+              </div>
+
+              {/* Кнопка сброса фильтров */}
+              <div className="flex items-end">
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Сбросить фильтры</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Показать количество результатов */}
+            {hasActiveFilters && (
+              <div className="text-sm text-gray-600">
+                Найдено: <span className="font-semibold">{sortedWebsites.length}</span> из {websites?.length || 0}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Websites List */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">
-              Список сайтов ({websites?.length || 0})
+              Список сайтов ({sortedWebsites.length})
             </h2>
             {selectedWebsites.size > 0 && (
               <button
@@ -207,7 +370,7 @@ const WebsitesPage = () => {
             )}
           </div>
 
-          {websites && websites.length > 0 ? (
+          {sortedWebsites && sortedWebsites.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -238,7 +401,7 @@ const WebsitesPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {websites.map((website) => (
+                  {sortedWebsites.map((website) => (
                     <tr key={website.id} className={selectedWebsites.has(website.id) ? 'bg-primary-50' : ''}>
                       <td className="px-6 py-4">
                         <input
@@ -327,12 +490,32 @@ const WebsitesPage = () => {
           ) : (
             <div className="text-center py-12">
               <Globe className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                У вас пока нет добавленных сайтов
-              </h3>
-              <p className="text-gray-600">
-                Добавьте свой первый сайт для мониторинга
-              </p>
+              {websites && websites.length > 0 ? (
+                <>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Нет результатов
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Попробуйте изменить параметры поиска или фильтры
+                  </p>
+                  <button
+                    onClick={clearFilters}
+                    className="btn-secondary inline-flex items-center space-x-2"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Сбросить фильтры</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    У вас пока нет добавленных сайтов
+                  </h3>
+                  <p className="text-gray-600">
+                    Добавьте свой первый сайт для мониторинга
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
