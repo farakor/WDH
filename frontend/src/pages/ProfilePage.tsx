@@ -50,10 +50,20 @@ const ProfilePage = () => {
   const reportMutation = useMutation({
     mutationFn: () => api.post('/status/report'),
     onSuccess: () => {
-      toast.success('Отчет отправлен в Telegram')
+      toast.success('Отчет по сайтам отправлен в Telegram')
     },
     onError: () => {
-      toast.error('Ошибка при отправке отчета')
+      toast.error('Ошибка при отправке отчета по сайтам')
+    },
+  })
+
+  const domainReportMutation = useMutation({
+    mutationFn: () => api.post('/status/domain-report'),
+    onSuccess: () => {
+      toast.success('Отчет по доменам отправлен в Telegram')
+    },
+    onError: () => {
+      toast.error('Ошибка при отправке отчета по доменам')
     },
   })
 
@@ -195,15 +205,29 @@ const ProfilePage = () => {
                   <button type="submit" disabled={updateMutation.isPending} className="btn-primary w-full">
                     {updateMutation.isPending ? 'Сохранение...' : 'Сохранить настройки'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => reportMutation.mutate()}
-                    disabled={!formData.telegramChatId || reportMutation.isPending}
-                    className="flex items-center justify-center space-x-2 btn-secondary w-full"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>{reportMutation.isPending ? 'Отправка...' : 'Тестовый отчет'}</span>
-                  </button>
+                  <div className="border-t border-gray-200 pt-3">
+                    <p className="text-sm text-gray-600 mb-3">Отправить отчеты в Telegram:</p>
+                    <div className="flex flex-col space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => reportMutation.mutate()}
+                        disabled={!formData.telegramChatId || reportMutation.isPending}
+                        className="flex items-center justify-center space-x-2 btn-secondary w-full text-sm"
+                      >
+                        <Send className="w-4 h-4" />
+                        <span>{reportMutation.isPending ? 'Отправка...' : 'Отчет по сайтам'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => domainReportMutation.mutate()}
+                        disabled={!formData.telegramChatId || domainReportMutation.isPending}
+                        className="flex items-center justify-center space-x-2 btn-secondary w-full text-sm"
+                      >
+                        <Send className="w-4 h-4" />
+                        <span>{domainReportMutation.isPending ? 'Отправка...' : 'Отчет по доменам'}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </form>
             </div>

@@ -7,6 +7,29 @@ import { sslService } from './ssl.service';
 import { ipService } from './ip.service';
 
 class MonitoringService {
+  /**
+   * Удаляет старые записи проверок, оставляя только последние 50 для сайта
+   */
+  private async cleanOldStatusChecks(websiteId: string): Promise<void> {
+    const checks = await prisma.statusCheck.findMany({
+      where: { websiteId },
+      orderBy: { checkedAt: 'desc' },
+      select: { id: true },
+    });
+
+    // Если записей больше 50, удаляем старые
+    if (checks.length > 50) {
+      const idsToKeep = checks.slice(0, 50).map(c => c.id);
+      await prisma.statusCheck.deleteMany({
+        where: {
+          websiteId,
+          id: { notIn: idsToKeep },
+        },
+      });
+      console.log(`🗑️  Удалено ${checks.length - 50} старых записей для сайта ${websiteId}`);
+    }
+  }
+
   async checkWebsite(url: string): Promise<{
     status: CheckStatus;
     responseTime: number | null;
@@ -174,6 +197,9 @@ class MonitoringService {
           },
         });
 
+        // Очистка старых записей (оставляем только 50 последних)
+        await this.cleanOldStatusChecks(website.id);
+
         console.log(
           `✓ ${website.name}: ${result.status} (${result.responseTime}ms)`
         );
@@ -244,6 +270,9 @@ class MonitoringService {
         sslDaysLeft: result.sslDaysLeft,
       },
     });
+
+    // Очистка старых записей (оставляем только 50 последних)
+    await this.cleanOldStatusChecks(website.id);
 
     const lastCheck = website.statusChecks[0];
     if (lastCheck && lastCheck.status !== result.status) {

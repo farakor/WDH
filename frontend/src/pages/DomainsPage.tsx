@@ -4,7 +4,7 @@ import { Layout } from '../components/Layout'
 import { api } from '../lib/api'
 import { Domain } from '../types'
 import toast from 'react-hot-toast'
-import { Plus, Globe, CheckCircle, XCircle, AlertTriangle, Calendar, Pencil, Trash2, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Search, X } from 'lucide-react'
+import { Plus, Globe, CheckCircle, XCircle, AlertTriangle, Calendar, Pencil, Trash2, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Search, X, Send } from 'lucide-react'
 
 type SortField = 'domain' | 'status' | 'daysLeft'
 type SortDirection = 'asc' | 'desc'
@@ -129,6 +129,16 @@ const DomainsPage = () => {
     },
   })
 
+  const domainReportMutation = useMutation({
+    mutationFn: () => api.post('/status/domain-report'),
+    onSuccess: () => {
+      toast.success('Отчет по доменам отправлен в Telegram')
+    },
+    onError: () => {
+      toast.error('Ошибка при отправке отчета')
+    },
+  })
+
   const handleDelete = (id: string, name: string) => {
     if (window.confirm(`Вы уверены, что хотите удалить домен "${name}"?`)) {
       deleteMutation.mutate(id)
@@ -234,13 +244,24 @@ const DomainsPage = () => {
             <h1 className="text-3xl font-bold text-gray-900">Мои домены</h1>
             <p className="text-gray-600 mt-1">Отслеживание срока действия доменных имён</p>
           </div>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center space-x-2 btn-primary"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Добавить домен</span>
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => domainReportMutation.mutate()}
+              disabled={domainReportMutation.isPending}
+              className="flex items-center space-x-2 btn-secondary"
+              title="Отправить отчет в Telegram"
+            >
+              <Send className="w-4 h-4" />
+              <span>{domainReportMutation.isPending ? 'Отправка...' : 'Отчет'}</span>
+            </button>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="flex items-center space-x-2 btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Добавить домен</span>
+            </button>
+          </div>
         </div>
 
         {/* Add/Edit Form */}

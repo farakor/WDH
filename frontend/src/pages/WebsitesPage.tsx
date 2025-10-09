@@ -6,7 +6,7 @@ import { Website } from '../types'
 import toast from 'react-hot-toast'
 import { WebsiteForm } from '../components/WebsiteForm'
 import { ImportWebsites } from '../components/ImportWebsites'
-import { Plus, Upload, Globe, CheckCircle, XCircle, Circle, ShieldAlert, AlertTriangle, Server, Pencil, Trash2, Search, X } from 'lucide-react'
+import { Plus, Upload, Globe, CheckCircle, XCircle, Circle, ShieldAlert, AlertTriangle, Server, Pencil, Trash2, Search, X, Send } from 'lucide-react'
 
 const WebsitesPage = () => {
   const [showAddForm, setShowAddForm] = useState(false)
@@ -62,6 +62,16 @@ const WebsitesPage = () => {
     },
     onError: () => {
       toast.error('Ошибка при массовом удалении сайтов')
+    },
+  })
+
+  const reportMutation = useMutation({
+    mutationFn: () => api.post('/status/report'),
+    onSuccess: () => {
+      toast.success('Отчет по сайтам отправлен в Telegram')
+    },
+    onError: () => {
+      toast.error('Ошибка при отправке отчета')
     },
   })
 
@@ -216,6 +226,15 @@ const WebsitesPage = () => {
             <p className="text-gray-600 mt-1">Управление списком отслеживаемых сайтов</p>
           </div>
           <div className="flex space-x-3">
+            <button
+              onClick={() => reportMutation.mutate()}
+              disabled={reportMutation.isPending}
+              className="flex items-center space-x-2 btn-secondary"
+              title="Отправить отчет в Telegram"
+            >
+              <Send className="w-4 h-4" />
+              <span>{reportMutation.isPending ? 'Отправка...' : 'Отчет'}</span>
+            </button>
             <button
               onClick={() => setShowImport(true)}
               className="flex items-center space-x-2 btn-secondary"

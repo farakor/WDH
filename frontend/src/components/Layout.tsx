@@ -44,8 +44,11 @@ export const Layout = ({ children }: LayoutProps) => {
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 flex-shrink-0">
           <Link to="/dashboard" className="flex items-center space-x-2">
-            <Activity className="w-8 h-8 text-primary-600" />
-            <span className="text-xl font-bold text-primary-600">WDH</span>
+            <img 
+              src="/assets/WDH-logo.svg" 
+              alt="WDH Logo" 
+              className="h-8"
+            />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -114,7 +117,7 @@ export const Layout = ({ children }: LayoutProps) => {
                 className="hover:opacity-80 transition-opacity"
               >
                 <img 
-                  src="/assets/faruk-oripov.svg" 
+                  src="/assets/faruk-badge.svg" 
                   alt="Faruk Oripov" 
                   className="h-5"
                 />

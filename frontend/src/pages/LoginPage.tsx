@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
-import { Activity } from 'lucide-react'
 
 const LoginPage = () => {
   const [email, setEmail] = useState('')
@@ -31,7 +30,11 @@ const LoginPage = () => {
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
         <div className="text-center">
           <div className="flex justify-center">
-            <Activity className="w-16 h-16 text-primary-600" />
+            <img 
+              src="/assets/WDH-logo.svg" 
+              alt="WDH Logo" 
+              className="h-16"
+            />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             Website Down Handler

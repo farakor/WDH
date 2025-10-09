@@ -43,7 +43,7 @@ export const getWebsiteById = async (req: AuthRequest, res: Response): Promise<v
       include: {
         statusChecks: {
           orderBy: { checkedAt: 'desc' },
-          take: 100,
+          take: 50,
         },
       },
     });

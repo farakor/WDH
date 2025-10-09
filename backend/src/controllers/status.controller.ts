@@ -8,7 +8,7 @@ export const getStatusHistory = async (req: AuthRequest, res: Response): Promise
   try {
     const userId = req.userId!;
     const { websiteId } = req.params;
-    const limit = parseInt(req.query.limit as string) || 100;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 50);
 
     // Проверка принадлежности сайта пользователю
     const website = await prisma.website.findFirst({
@@ -77,6 +77,21 @@ export const sendStatusReport = async (req: AuthRequest, res: Response): Promise
     console.error('Send report error:', error);
     res.status(500).json({ 
       message: error.message || 'Ошибка при отправке отчета'
+    });
+  }
+};
+
+export const sendDomainReport = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId!;
+
+    await telegramService.sendDomainReport(userId);
+
+    res.json({ message: 'Отчет по доменам отправлен в Telegram' });
+  } catch (error: any) {
+    console.error('Send domain report error:', error);
+    res.status(500).json({ 
+      message: error.message || 'Ошибка при отправке отчета по доменам'
     });
   }
 };
