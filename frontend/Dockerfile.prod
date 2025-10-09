@@ -4,12 +4,11 @@ FROM node:20 AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json ./
 
 # Install ALL dependencies (including devDependencies for build)
-# Clear cache and install with legacy peer deps to handle optional dependencies properly
-RUN npm cache clean --force && \
-  npm install --legacy-peer-deps
+# Don't use package-lock.json to avoid optional dependencies issues
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
