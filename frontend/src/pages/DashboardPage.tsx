@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { Layout } from '../components/Layout'
 import { api } from '../lib/api'
-import { Website, WebsiteStats, Domain, DomainStats } from '../types'
+import { Website, WebsiteStats, DomainStats } from '../types'
 import { Link, useNavigate } from 'react-router-dom'
-import { Globe, CheckCircle, Circle, XCircle, Plus, Shield, ShieldAlert, AlertTriangle, Server, Globe2, Calendar } from 'lucide-react'
+import { Globe, CheckCircle, Circle, XCircle, Plus, ShieldAlert, AlertTriangle, Server, Globe2 } from 'lucide-react'
 
 const DashboardPage = () => {
   const navigate = useNavigate()
@@ -33,7 +33,7 @@ const DashboardPage = () => {
     },
   })
 
-  const { data: domains, isLoading: domainsLoading } = useQuery<Domain[]>({
+  const { isLoading: domainsLoading } = useQuery<Domain[]>({
     queryKey: ['domains'],
     queryFn: async () => {
       const response = await api.get('/domains')
@@ -270,7 +270,7 @@ const DashboardPage = () => {
                               </span>
                             )}
                             {/* SSL истекает */}
-                            {lastCheck?.sslValid === true && lastCheck?.sslDaysLeft !== null && lastCheck.sslDaysLeft <= 30 && (
+                            {lastCheck?.sslValid === true && lastCheck?.sslDaysLeft !== null && lastCheck?.sslDaysLeft !== undefined && lastCheck.sslDaysLeft <= 30 && (
                               <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
                                 lastCheck.sslDaysLeft <= 7 ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
                               }`}>

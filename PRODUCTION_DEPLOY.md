@@ -51,9 +51,9 @@ POSTGRES_PASSWORD=ваш_сильный_пароль
 POSTGRES_DB=wdh_db
 
 JWT_SECRET=$(openssl rand -base64 64)
-TELEGRAM_BOT_TOKEN=ваш_telegram_token
+TELEGRAM_BOT_TOKEN=8221533289:AAEoEA0reFwXOg5yeioM7RK5XMJ9xGnFs7E
 
-VITE_API_URL=https://ваш-домен.com/api
+VITE_API_URL=https://wdh.faruk.io/api
 ```
 
 ### 4. Запуск в production режиме

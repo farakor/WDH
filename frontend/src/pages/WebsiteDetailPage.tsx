@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Layout } from '../components/Layout'
 import { api } from '../lib/api'
-import { Website, StatusCheck } from '../types'
+import { Website } from '../types'
 import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { ArrowLeft, RefreshCw, Shield, ShieldAlert, ShieldCheck, Clock, Server, Globe } from 'lucide-react'
@@ -214,7 +214,7 @@ const WebsiteDetailPage = () => {
                     </div>
                   )}
 
-                  {lastCheck.sslDaysLeft !== null && (
+                  {lastCheck.sslDaysLeft !== null && lastCheck.sslDaysLeft !== undefined && (
                     <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                       <Clock className={`w-6 h-6 ${
                         lastCheck.sslDaysLeft <= 7 ? 'text-red-600' :
@@ -253,7 +253,7 @@ const WebsiteDetailPage = () => {
                   </div>
                 )}
 
-                {lastCheck.sslDaysLeft !== null && lastCheck.sslDaysLeft <= 30 && (
+                {lastCheck.sslDaysLeft !== null && lastCheck.sslDaysLeft !== undefined && lastCheck.sslDaysLeft <= 30 && (
                   <div className={`mt-3 p-4 rounded-lg border ${
                     lastCheck.sslDaysLeft <= 7 
                       ? 'bg-red-50 border-red-200' 

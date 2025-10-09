@@ -306,13 +306,13 @@ const WebsitesPage = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">IP адрес</label>
                 <select
-                  value={filterIp}
+                  value={filterIp || ''}
                   onChange={(e) => setFilterIp(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="">Все IP адреса</option>
                   {uniqueIPs.map((ip) => (
-                    <option key={ip} value={ip}>{ip}</option>
+                    <option key={ip || 'empty'} value={ip || ''}>{ip}</option>
                   ))}
                 </select>
               </div>
@@ -321,13 +321,13 @@ const WebsitesPage = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Хостинг</label>
                 <select
-                  value={filterHosting}
+                  value={filterHosting || ''}
                   onChange={(e) => setFilterHosting(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="">Все хостинги</option>
                   {uniqueHostings.map((hosting) => (
-                    <option key={hosting} value={hosting}>{hosting}</option>
+                    <option key={hosting || 'empty'} value={hosting || ''}>{hosting}</option>
                   ))}
                 </select>
               </div>
@@ -473,6 +473,7 @@ const WebsitesPage = () => {
                           {/* SSL истекает */}
                           {website.statusChecks?.[0]?.sslValid === true && 
                            website.statusChecks?.[0]?.sslDaysLeft !== null && 
+                           website.statusChecks?.[0]?.sslDaysLeft !== undefined && 
                            website.statusChecks[0].sslDaysLeft <= 30 && (
                             <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
                               website.statusChecks[0].sslDaysLeft <= 7 ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
