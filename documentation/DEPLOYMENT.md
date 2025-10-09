@@ -36,6 +36,22 @@
 
 Это самый простой и надежный способ развертывания.
 
+### ⚠️ ВАЖНО: Использование Production файлов
+
+Для продакшен деплоя используйте специальные production файлы:
+
+- `docker-compose.prod.yml` - вместо `docker-compose.yml`
+- `Dockerfile.prod` - для backend и frontend (вместо обычных `Dockerfile`)
+
+Эти файлы оптимизированы для production:
+
+- ✅ Multi-stage сборка (меньший размер образов)
+- ✅ TypeScript компиляция включена
+- ✅ Nginx для раздачи статики frontend
+- ✅ Production зависимости без dev-пакетов
+- ✅ Health checks для всех сервисов
+- ✅ Безопасность (non-root user)
+
 ### 1. Подключение к серверу
 
 ```bash
@@ -107,199 +123,117 @@ sudo chown $USER:$USER /opt/wdh
 cd /opt/wdh
 
 # Клонируйте репозиторий (замените на ваш URL)
-git clone https://github.com/your-username/WDH.git .
+git clone https://github.com/farakor/WDH.git
 ```
 
-### 8. Создание .env файла
+### 8. Создание .env файла для production
 
 ```bash
-# Создайте файл с переменными окружения
-nano .env
+# Скопируйте шаблон
+cp .env.production.example .env.production
+
+# Отредактируйте файл
+nano .env.production
 ```
 
-Добавьте следующее содержимое:
+Заполните все необходимые переменные:
 
 ```env
-# Telegram Bot Token (получите у @BotFather)
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+# Database Configuration
+POSTGRES_USER=wdh_user
+POSTGRES_PASSWORD=ВАШ_СИЛЬНЫЙ_ПАРОЛЬ_БАЗЫ_ДАННЫХ
+POSTGRES_DB=wdh_db
+
+# Backend Configuration
+JWT_SECRET=ВАШ_СЕКРЕТНЫЙ_КЛЮЧ_МИНИМУМ_32_СИМВОЛА
+TELEGRAM_BOT_TOKEN=ваш_telegram_bot_token
+
+# Frontend Configuration
+VITE_API_URL=https://ваш-домен.com/api
 ```
+
+**Важно:**
+
+- Сгенерируйте сильный `JWT_SECRET`: `openssl rand -base64 64`
+- Получите `TELEGRAM_BOT_TOKEN` у @BotFather в Telegram
+- Укажите правильный домен в `VITE_API_URL`
 
 Сохраните файл (`Ctrl+X`, затем `Y`, затем `Enter`).
 
-### 9. Настройка конфигурации для production
+### 9. Использование production конфигурации
 
-Отредактируйте `docker-compose.yml`:
+Для production используйте `docker-compose.prod.yml`:
 
 ```bash
 nano docker-compose.yml
 ```
 
-Измените следующие параметры:
+Файл `docker-compose.prod.yml` уже настроен правильно и использует переменные из `.env.production`.
 
-```yaml
-services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: wdh-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: wdh_user
-      POSTGRES_PASSWORD: STRONG_PASSWORD_HERE # Измените!
-      POSTGRES_DB: wdh_db
-    ports:
-      - "127.0.0.1:5432:5432" # Доступ только с localhost
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - wdh-network
+**Что включено в production конфигурацию:**
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: wdh-backend
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: postgresql://wdh_user:STRONG_PASSWORD_HERE@postgres:5432/wdh_db # Измените пароль!
-      JWT_SECRET: CHANGE_THIS_TO_RANDOM_SECRET_KEY # Сгенерируйте случайную строку!
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      PORT: 3000
-      NODE_ENV: production
-    ports:
-      - "127.0.0.1:3000:3000" # Доступ только с localhost
-    depends_on:
-      - postgres
-    networks:
-      - wdh-network
+- ✅ PostgreSQL с health checks
+- ✅ Backend с оптимизированной сборкой
+- ✅ Frontend с Nginx на порту 80
+- ✅ Все сервисы используют переменные окружения из `.env.production`
+- ✅ Автоматический перезапуск контейнеров
+- ✅ Изоляция сети
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.prod # Создадим отдельный production Dockerfile
-    container_name: wdh-frontend
-    restart: unless-stopped
-    environment:
-      VITE_API_URL: https://your-domain.com/api # Замените на ваш домен!
-    ports:
-      - "127.0.0.1:5173:80" # Доступ только с localhost
-    depends_on:
-      - backend
-    networks:
-      - wdh-network
+### 10. Проверка production файлов
 
-volumes:
-  postgres_data:
-    driver: local
-
-networks:
-  wdh-network:
-    driver: bridge
-```
-
-### 10. Создание production Dockerfile для frontend
+Убедитесь, что все необходимые файлы на месте:
 
 ```bash
-nano frontend/Dockerfile.prod
+# Проверьте наличие production файлов
+ls -la docker-compose.prod.yml
+ls -la .env.production
+ls -la frontend/Dockerfile.prod
+ls -la frontend/nginx.conf
+ls -la backend/Dockerfile.prod
 ```
 
-Добавьте:
+Все эти файлы должны уже существовать в проекте.
 
-```dockerfile
-FROM node:18-slim AS builder
-
-WORKDIR /app
-
-# Копирование package files
-COPY package*.json ./
-
-# Установка зависимостей
-RUN npm ci --only=production
-
-# Копирование исходного кода
-COPY . .
-
-# Сборка приложения
-RUN npm run build
-
-# Production образ с nginx
-FROM nginx:alpine
-
-# Копирование собранного приложения
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Копирование конфигурации nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-### 11. Создание nginx.conf для frontend
+### 11. Запуск приложения в production режиме
 
 ```bash
-nano frontend/nginx.conf
-```
+# Перейдите в директорию проекта
+cd /opt/wdh/WDH
 
-Добавьте:
-
-```nginx
-server {
-    listen 80;
-    server_name localhost;
-    root /usr/share/nginx/html;
-    index index.html;
-
-    # Gzip компрессия
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-
-    # Обработка SPA роутинга
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Кэширование статических файлов
-    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
-```
-
-### 12. Генерация JWT_SECRET
-
-```bash
-# Сгенерируйте случайную строку для JWT_SECRET
-openssl rand -base64 32
-```
-
-Скопируйте результат и замените `CHANGE_THIS_TO_RANDOM_SECRET_KEY` в `docker-compose.yml`.
-
-### 13. Запуск приложения
-
-```bash
-# Сборка и запуск контейнеров
-docker-compose up -d --build
+# Сборка и запуск контейнеров с production конфигурацией
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 
 # Проверка статуса
-docker-compose ps
+docker compose -f docker-compose.prod.yml ps
 
 # Просмотр логов
-docker-compose logs -f
+docker compose -f docker-compose.prod.yml logs -f
 ```
 
-### 14. Проверка работы
+**Примечание:** Первая сборка может занять несколько минут, так как:
+
+- Устанавливаются все зависимости (включая TypeScript)
+- Компилируется TypeScript код
+- Собирается frontend с Vite
+- Создаются оптимизированные Docker образы
+
+### 12. Проверка работы
 
 ```bash
-# Проверка backend
-curl http://localhost:3000/api
+# Проверка backend (порт 3000)
+curl http://localhost:3000/api/health
 
-# Проверка frontend
-curl http://localhost:5173
+# Проверка frontend (порт 80)
+curl http://localhost/health
+
+# Проверка всех контейнеров
+docker compose -f docker-compose.prod.yml ps
+
+# Проверка health checks
+docker compose -f docker-compose.prod.yml ps --filter health=healthy
 ```
+
+Все сервисы должны быть в состоянии `healthy`.
 
 ---
 
