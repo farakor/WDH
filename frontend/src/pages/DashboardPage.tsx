@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Layout } from '../components/Layout'
 import { api } from '../lib/api'
-import { Website, WebsiteStats, DomainStats } from '../types'
+import { Website, WebsiteStats, Domain, DomainStats } from '../types'
 import { Link, useNavigate } from 'react-router-dom'
 import { Globe, CheckCircle, Circle, XCircle, Plus, ShieldAlert, AlertTriangle, Server, Globe2 } from 'lucide-react'
 
