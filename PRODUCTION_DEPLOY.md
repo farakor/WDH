@@ -47,7 +47,7 @@ nano .env.production
 
 ```env
 POSTGRES_USER=wdh_user
-POSTGRES_PASSWORD=ваш_сильный_пароль
+POSTGRES_PASSWORD=q56x73KYdQjL
 POSTGRES_DB=wdh_db
 
 JWT_SECRET=$(openssl rand -base64 64)
