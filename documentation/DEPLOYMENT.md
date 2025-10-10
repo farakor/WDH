@@ -275,7 +275,7 @@ sudo nano /etc/nginx/sites-available/wdh
 server {
     listen 80;
     listen [::]:80;
-    server_name your-domain.com www.your-domain.com;
+    server_name wdh.faruk.io www.wdh.faruk.io;
 
     # Для получения SSL сертификата
     location /.well-known/acme-challenge/ {
@@ -292,18 +292,8 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name your-domain.com www.your-domain.com;
+    server_name wdh.faruk.io www.wdh.faruk.io;
 
-    # SSL сертификаты (будут настроены Certbot'ом)
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-
-    # SSL настройки
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers on;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
 
     # Заголовки безопасности
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
@@ -367,7 +357,7 @@ sudo systemctl restart nginx
 
 ```bash
 # Получение сертификата
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+sudo certbot --nginx -d wdh.faruk.io -d www.wdh.faruk.io
 
 # Следуйте инструкциям Certbot
 # Выберите опцию редиректа на HTTPS
