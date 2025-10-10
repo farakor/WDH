@@ -30,7 +30,10 @@ import RegisterPage from "./pages/RegisterPage";
 **Файл:** `frontend/src/pages/LoginPage.tsx`
 
 ```typescript
-// Раскомментируйте строки 91-98:
+// 1. Добавьте Link в импорт (строка 2):
+import { Link, useNavigate } from "react-router-dom";
+
+// 2. Раскомментируйте строки 91-98:
 <div className="text-center">
   <p className="text-sm text-gray-600">
     Нет аккаунта?{" "}
@@ -41,7 +44,7 @@ import RegisterPage from "./pages/RegisterPage";
       Зарегистрироваться
     </Link>
   </p>
-</div>
+</div>;
 ```
 
 ## После изменений
