@@ -250,7 +250,7 @@ sudo nano /etc/nginx/sites-available/wdh
 server {
     listen 80;
     listen [::]:80;
-    server_name your-domain.com www.your-domain.com;
+    server_name wdh.faruk.io www.wdh.faruk.io;
 
     # Для Let's Encrypt
     location /.well-known/acme-challenge/ {
@@ -266,11 +266,11 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name your-domain.com www.your-domain.com;
+    server_name wdh.faruk.io www.wdh.faruk.io;
 
     # SSL сертификаты
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/wdh.faruk.io/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wdh.faruk.io/privkey.pem;
 
     # SSL настройки
     ssl_protocols TLSv1.2 TLSv1.3;

@@ -130,10 +130,10 @@ git clone https://github.com/farakor/WDH.git
 
 ```bash
 # Скопируйте шаблон
-cp .env.production.example .env.production
+cp .env.example .env
 
 # Отредактируйте файл
-nano .env.production
+nano .env
 ```
 
 Заполните все необходимые переменные:
@@ -165,17 +165,17 @@ VITE_API_URL=https://ваш-домен.com/api
 Для production используйте `docker-compose.prod.yml`:
 
 ```bash
-nano docker-compose.yml
+nano docker-compose.prod.yml
 ```
 
-Файл `docker-compose.prod.yml` уже настроен правильно и использует переменные из `.env.production`.
+Файл `docker-compose.prod.yml` уже настроен правильно и использует переменные из `.env`.
 
 **Что включено в production конфигурацию:**
 
 - ✅ PostgreSQL с health checks
 - ✅ Backend с оптимизированной сборкой
 - ✅ Frontend с Nginx на порту 80
-- ✅ Все сервисы используют переменные окружения из `.env.production`
+- ✅ Все сервисы используют переменные окружения из `.env`
 - ✅ Автоматический перезапуск контейнеров
 - ✅ Изоляция сети
 
@@ -186,7 +186,7 @@ nano docker-compose.yml
 ```bash
 # Проверьте наличие production файлов
 ls -la docker-compose.prod.yml
-ls -la .env.production
+ls -la .env
 ls -la frontend/Dockerfile.prod
 ls -la frontend/nginx.conf
 ls -la backend/Dockerfile.prod
@@ -198,10 +198,10 @@ ls -la backend/Dockerfile.prod
 
 ```bash
 # Перейдите в директорию проекта
-cd /opt/wdh/WDH
+cd /opt/WDH
 
 # Сборка и запуск контейнеров с production конфигурацией
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 
 # Проверка статуса
 docker compose -f docker-compose.prod.yml ps
@@ -221,7 +221,7 @@ docker compose -f docker-compose.prod.yml logs -f
 
 ```bash
 # Проверка backend (порт 3000)
-curl http://localhost:3000/api/health
+curl http://localhost:3000/health
 
 # Проверка frontend (порт 80)
 curl http://localhost/health
@@ -271,66 +271,33 @@ sudo nano /etc/nginx/sites-available/wdh
 Добавьте:
 
 ```nginx
-# Перенаправление HTTP на HTTPS
 server {
     listen 80;
     listen [::]:80;
     server_name wdh.faruk.io www.wdh.faruk.io;
 
-    # Для получения SSL сертификата
+    # Для Let's Encrypt
     location /.well-known/acme-challenge/ {
         root /var/www/html;
     }
 
-    # Перенаправление на HTTPS
+    # Временно показываем приложение
     location / {
-        return 301 https://$server_name$request_uri;
+        root /opt/wdh/frontend/dist;
+        index index.html;
+        try_files $uri $uri/ /index.html;
     }
-}
 
-# HTTPS конфигурация
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name wdh.faruk.io www.wdh.faruk.io;
-
-
-    # Заголовки безопасности
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-
-    # Логи
-    access_log /var/log/nginx/wdh-access.log;
-    error_log /var/log/nginx/wdh-error.log;
-
-    # Proxy для backend API
+    # Backend API
     location /api {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-        proxy_read_timeout 300s;
-        proxy_connect_timeout 75s;
     }
 
-    # Proxy для frontend
-    location / {
-        proxy_pass http://127.0.0.1:5173;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # Ограничение размера загружаемых файлов
     client_max_body_size 10M;
 }
 ```
