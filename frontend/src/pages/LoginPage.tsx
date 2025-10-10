@@ -87,14 +87,15 @@ const LoginPage = () => {
             {isLoading ? 'Вход...' : 'Войти'}
           </button>
 
-          <div className="text-center">
+          {/* ВРЕМЕННО ЗАБЛОКИРОВАНО: Регистрация отключена */}
+          {/* <div className="text-center">
             <p className="text-sm text-gray-600">
               Нет аккаунта?{' '}
               <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
                 Зарегистрироваться
               </Link>
             </p>
-          </div>
+          </div> */}
         </form>
       </div>
     </div>
